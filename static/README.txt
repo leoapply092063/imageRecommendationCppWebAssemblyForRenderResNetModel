@@ -1,0 +1,1 @@
+Images are served from the Images folder. You can symlink or copy images here if needed, or configure Flask to serve from the Images directory directly. 
