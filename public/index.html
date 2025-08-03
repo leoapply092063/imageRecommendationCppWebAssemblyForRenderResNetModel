@@ -52,7 +52,7 @@
         
         .image-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-template-columns: repeat(3, 1fr);
             gap: 20px;
             margin-bottom: 30px;
         }
@@ -83,20 +83,7 @@
             display: block;
         }
         
-        .image-info {
-            padding: 10px;
-            background: rgba(255,255,255,0.95);
-            position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            transform: translateY(100%);
-            transition: transform 0.3s ease;
-        }
-        
-        .image-item:hover .image-info {
-            transform: translateY(0);
-        }
+
         
         .btn {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -326,41 +313,13 @@
                 imageItem.className = 'image-item';
                 imageItem.onclick = () => selectImage(index, imagePath);
                 
-                // Show placeholder immediately, load image on demand
-                imageItem.innerHTML = `
-                    <div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
-                        <span style="color: #666;">Loading...</span>
-                    </div>
-                    <div class="image-info">
-                        <strong>Image ${index + 1}</strong>
-                        <br>
-                        <small>${imagePath.split('/').pop()}</small>
-                    </div>
-                `;
-                
-                // Load image immediately for first 6 images
+                // Load image immediately
                 const img = new Image();
                 img.onload = () => {
-                    imageItem.innerHTML = `
-                        <img src="${imagePath}" alt="Image ${index + 1}" loading="eager">
-                        <div class="image-info">
-                            <strong>Image ${index + 1}</strong>
-                            <br>
-                            <small>${imagePath.split('/').pop()}</small>
-                        </div>
-                    `;
+                    imageItem.innerHTML = `<img src="${imagePath}" alt="Image ${index + 1}" loading="eager">`;
                 };
                 img.onerror = () => {
-                    imageItem.innerHTML = `
-                        <div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
-                            <span style="color: #666;">Failed to load</span>
-                        </div>
-                        <div class="image-info">
-                            <strong>Image ${index + 1}</strong>
-                            <br>
-                            <small>${imagePath.split('/').pop()}</small>
-                        </div>
-                    `;
+                    imageItem.innerHTML = `<div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;"><span style="color: #666;">Failed</span></div>`;
                 };
                 img.src = imagePath;
                 
@@ -516,7 +475,7 @@
                 
                 const input = new ort.Tensor('float32', floatData, [1, 3, 224, 224]);
                 const normalizedInput = normalizeImage(input);
-                const feeds = { input: normalizedInput };
+                const feeds = { data: normalizedInput };
                 const results = await session.run(feeds);
                 const output = results.output;
                 console.log('Features extracted successfully:', output.data.length, 'features');
@@ -579,49 +538,20 @@
                 const imageItem = document.createElement('div');
                 imageItem.className = 'image-item';
                 
-                // Show placeholder immediately
-                imageItem.innerHTML = `
-                    <div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
-                        <span style="color: #666;">Loading...</span>
-                    </div>
-                    <div class="similarity-score">${(result.score * 100).toFixed(1)}%</div>
-                    <div class="image-info">
-                        <strong>Recommendation ${index + 1}</strong>
-                        <br>
-                        <small>${result.path.split('/').pop()}</small>
-                        <br>
-                        <small>Similarity: ${(result.score * 100).toFixed(1)}%</small>
-                    </div>
-                `;
-                
                 // Load image immediately for recommendations
                 const img = new Image();
                 img.onload = () => {
                     imageItem.innerHTML = `
                         <img src="${result.path}" alt="Recommendation ${index + 1}" loading="eager">
                         <div class="similarity-score">${(result.score * 100).toFixed(1)}%</div>
-                        <div class="image-info">
-                            <strong>Recommendation ${index + 1}</strong>
-                            <br>
-                            <small>${result.path.split('/').pop()}</small>
-                            <br>
-                            <small>Similarity: ${(result.score * 100).toFixed(1)}%</small>
-                        </div>
                     `;
                 };
                 img.onerror = () => {
                     imageItem.innerHTML = `
                         <div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
-                            <span style="color: #666;">Failed to load</span>
+                            <span style="color: #666;">Failed</span>
                         </div>
                         <div class="similarity-score">${(result.score * 100).toFixed(1)}%</div>
-                        <div class="image-info">
-                            <strong>Recommendation ${index + 1}</strong>
-                            <br>
-                            <small>${result.path.split('/').pop()}</small>
-                            <br>
-                            <small>Similarity: ${(result.score * 100).toFixed(1)}%</small>
-                        </div>
                     `;
                 };
                 img.src = result.path;
