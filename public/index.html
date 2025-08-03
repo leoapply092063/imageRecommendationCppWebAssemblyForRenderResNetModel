@@ -404,9 +404,26 @@
                     // Draw and resize image
                     ctx.drawImage(img, 0, 0, 224, 224);
                     
-                    // Get image data
+                    // Get image data (RGBA format)
                     const imageData = ctx.getImageData(0, 0, 224, 224);
-                    resolve(imageData);
+                    
+                    // Convert RGBA to RGB (remove alpha channel)
+                    const rgbData = new Uint8Array(224 * 224 * 3);
+                    for (let i = 0, j = 0; i < imageData.data.length; i += 4, j += 3) {
+                        rgbData[j] = imageData.data[i];     // Red
+                        rgbData[j + 1] = imageData.data[i + 1]; // Green
+                        rgbData[j + 2] = imageData.data[i + 2]; // Blue
+                        // Skip alpha channel (i + 3)
+                    }
+                    
+                    // Create a new ImageData object with RGB data
+                    const rgbImageData = {
+                        data: rgbData,
+                        width: 224,
+                        height: 224
+                    };
+                    
+                    resolve(rgbImageData);
                 };
                 img.onerror = reject;
                 img.src = imagePath;
