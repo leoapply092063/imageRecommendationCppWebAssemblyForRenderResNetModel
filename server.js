@@ -34,6 +34,10 @@ app.get('/resnet50-v1-7.onnx', (req, res) => {
     const fs = require('fs');
     if (fs.existsSync(modelPath)) {
         console.log('Model file exists, sending...');
+        // Add headers for large file download
+        res.setHeader('Content-Type', 'application/octet-stream');
+        res.setHeader('Content-Disposition', 'attachment; filename="resnet50-v1-7.onnx"');
+        res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache for 24 hours
         res.sendFile(modelPath);
     } else {
         console.error('Model file not found at:', modelPath);
