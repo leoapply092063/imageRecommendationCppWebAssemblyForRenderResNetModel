@@ -24,6 +24,23 @@ app.use('/', express.static(__dirname, {
     etag: true
 })); // Serve files from root directory
 
+// Serve the ResNet model file
+app.get('/resnet50-v1-7.onnx', (req, res) => {
+    console.log('ResNet model requested');
+    const modelPath = path.join(__dirname, 'resnet50-v1-7.onnx');
+    console.log('Model path:', modelPath);
+    
+    // Check if file exists
+    const fs = require('fs');
+    if (fs.existsSync(modelPath)) {
+        console.log('Model file exists, sending...');
+        res.sendFile(modelPath);
+    } else {
+        console.error('Model file not found at:', modelPath);
+        res.status(404).send('ResNet model not found');
+    }
+});
+
 // Serve the main HTML page
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'index.html'));
