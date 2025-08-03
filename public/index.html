@@ -62,13 +62,7 @@
             border-radius: 10px;
             overflow: hidden;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
             cursor: pointer;
-        }
-        
-        .image-item:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
         }
         
         .image-item.selected {
@@ -93,12 +87,7 @@
             border-radius: 25px;
             font-size: 16px;
             cursor: pointer;
-            transition: transform 0.2s ease;
             margin: 10px;
-        }
-        
-        .btn:hover {
-            transform: translateY(-2px);
         }
         
         .btn:disabled {
@@ -493,7 +482,24 @@
                 console.log('Using input name:', inputName);
                 console.log('Feeds object:', feeds);
                 const results = await session.run(feeds);
-                const output = results.output;
+                
+                // Get the actual output name from the model
+                const outputNames = session.outputNames;
+                console.log('Model output names:', outputNames);
+                
+                if (!outputNames || outputNames.length === 0) {
+                    throw new Error('No output names found in model');
+                }
+                
+                // Use the first output name (most models have one output)
+                const outputName = outputNames[0];
+                const output = results[outputName];
+                
+                if (!output || !output.data) {
+                    console.error('Results object:', results);
+                    throw new Error(`Output '${outputName}' not found in results`);
+                }
+                
                 console.log('Features extracted successfully:', output.data.length, 'features');
                 return output.data;
             } catch (error) {
