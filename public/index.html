@@ -295,8 +295,17 @@
                     return;
                 }
                 
-                displayImageSelection(allImages.slice(0, 6)); // Show first 6 images
-                showStatus(`Loaded ${allImages.length} images successfully!`, 'success');
+                // Show first 6 images immediately, then load more progressively
+                displayImageSelection(allImages.slice(0, 6));
+                showStatus(`Loaded ${allImages.length} images successfully! Showing first 6.`, 'success');
+                
+                // Preload remaining images in background
+                setTimeout(() => {
+                    allImages.slice(6).forEach(imagePath => {
+                        const img = new Image();
+                        img.src = imagePath;
+                    });
+                }, 1000);
             } catch (error) {
                 showStatus(`Error loading images: ${error.message}`, 'error');
                 console.error('Image loading error:', error);
@@ -313,14 +322,31 @@
                 imageItem.className = 'image-item';
                 imageItem.onclick = () => selectImage(index, imagePath);
                 
-                imageItem.innerHTML = `
-                    <img src="${imagePath}" alt="Image ${index + 1}" loading="lazy">
-                    <div class="image-info">
-                        <strong>Image ${index + 1}</strong>
-                        <br>
-                        <small>${imagePath.split('/').pop()}</small>
-                    </div>
-                `;
+                // Preload image for better performance
+                const img = new Image();
+                img.onload = () => {
+                    imageItem.innerHTML = `
+                        <img src="${imagePath}" alt="Image ${index + 1}" loading="eager">
+                        <div class="image-info">
+                            <strong>Image ${index + 1}</strong>
+                            <br>
+                            <small>${imagePath.split('/').pop()}</small>
+                        </div>
+                    `;
+                };
+                img.onerror = () => {
+                    imageItem.innerHTML = `
+                        <div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: #666;">Failed to load</span>
+                        </div>
+                        <div class="image-info">
+                            <strong>Image ${index + 1}</strong>
+                            <br>
+                            <small>${imagePath.split('/').pop()}</small>
+                        </div>
+                    `;
+                };
+                img.src = imagePath;
                 
                 container.appendChild(imageItem);
             });
@@ -360,19 +386,38 @@
                 const selectedImg = await loadImage(selectedImage.path);
                 const selectedFeatures = await extractFeatures(selectedImg);
                 
-                // Process all other images
+                // Process all other images in parallel for better performance
                 const results = [];
                 const otherImages = allImages.filter((_, index) => index !== selectedImage.index);
                 
-                for (let i = 0; i < otherImages.length; i++) {
-                    const img = await loadImage(otherImages[i]);
-                    const features = await extractFeatures(img);
-                    const similarity = cosineSimilarity(selectedFeatures, features);
-                    
-                    results.push({
-                        path: otherImages[i],
-                        score: similarity
+                // Process images in batches to avoid overwhelming the browser
+                const batchSize = 3;
+                for (let i = 0; i < otherImages.length; i += batchSize) {
+                    const batch = otherImages.slice(i, i + batchSize);
+                    const batchPromises = batch.map(async (imagePath) => {
+                        try {
+                            const img = await loadImage(imagePath);
+                            const features = await extractFeatures(img);
+                            const similarity = cosineSimilarity(selectedFeatures, features);
+                            
+                            return {
+                                path: imagePath,
+                                score: similarity
+                            };
+                        } catch (error) {
+                            console.error(`Error processing ${imagePath}:`, error);
+                            return {
+                                path: imagePath,
+                                score: 0
+                            };
+                        }
                     });
+                    
+                    const batchResults = await Promise.all(batchPromises);
+                    results.push(...batchResults);
+                    
+                    // Update progress
+                    showStatus(`Processing images... ${Math.min(i + batchSize, otherImages.length)}/${otherImages.length}`, 'info');
                 }
                 
                 // Sort by similarity score

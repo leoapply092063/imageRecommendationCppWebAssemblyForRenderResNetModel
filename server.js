@@ -3,10 +3,26 @@ const path = require('path');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Serve static files
-app.use(express.static('public'));
-app.use('/static', express.static('static'));
-app.use('/', express.static(__dirname)); // Serve files from root directory
+// Serve static files with caching headers for better performance
+app.use(express.static('public', {
+    maxAge: '1h',
+    etag: true
+}));
+
+app.use('/static', express.static('static', {
+    maxAge: '24h', // Cache images for 24 hours
+    etag: true,
+    setHeaders: (res, path) => {
+        if (path.endsWith('.png') || path.endsWith('.jpg') || path.endsWith('.jpeg')) {
+            res.setHeader('Cache-Control', 'public, max-age=86400'); // 24 hours
+        }
+    }
+}));
+
+app.use('/', express.static(__dirname, {
+    maxAge: '1h',
+    etag: true
+})); // Serve files from root directory
 
 // Serve the main HTML page
 app.get('/', (req, res) => {
