@@ -264,10 +264,14 @@
                     return; // Stop initialization if ResNet fails
                 }
                 
-                showStatus('Initializing WebAssembly module...', 'info');
-                // Initialize WebAssembly module
-                if (window.ImageRecommendationWasm) {
-                    await window.ImageRecommendationWasm.init();
+                // Initialize WebAssembly module (optional)
+                if (window.ImageRecommendationWasm && window.ImageRecommendationWasm.init) {
+                    try {
+                        await window.ImageRecommendationWasm.init();
+                        console.log('WebAssembly module initialized');
+                    } catch (wasmError) {
+                        console.warn('WebAssembly initialization failed, continuing with ResNet only:', wasmError);
+                    }
                 }
                 
                 showStatus('Loading images...', 'info');
@@ -295,17 +299,17 @@
                     return;
                 }
                 
-                // Show first 6 images immediately, then load more progressively
+                // Show first 6 images immediately
                 displayImageSelection(allImages.slice(0, 6));
-                showStatus(`Loaded ${allImages.length} images successfully! Showing first 6.`, 'success');
+                showStatus(`Ready! ${allImages.length} images available.`, 'success');
                 
-                // Preload remaining images in background
+                // Load remaining images in background after a delay
                 setTimeout(() => {
                     allImages.slice(6).forEach(imagePath => {
                         const img = new Image();
                         img.src = imagePath;
                     });
-                }, 1000);
+                }, 2000);
             } catch (error) {
                 showStatus(`Error loading images: ${error.message}`, 'error');
                 console.error('Image loading error:', error);
@@ -322,7 +326,19 @@
                 imageItem.className = 'image-item';
                 imageItem.onclick = () => selectImage(index, imagePath);
                 
-                // Preload image for better performance
+                // Show placeholder immediately, load image on demand
+                imageItem.innerHTML = `
+                    <div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: #666;">Loading...</span>
+                    </div>
+                    <div class="image-info">
+                        <strong>Image ${index + 1}</strong>
+                        <br>
+                        <small>${imagePath.split('/').pop()}</small>
+                    </div>
+                `;
+                
+                // Load image immediately for first 6 images
                 const img = new Image();
                 img.onload = () => {
                     imageItem.innerHTML = `
@@ -390,35 +406,29 @@
                 const results = [];
                 const otherImages = allImages.filter((_, index) => index !== selectedImage.index);
                 
-                // Process images in batches to avoid overwhelming the browser
-                const batchSize = 3;
-                for (let i = 0; i < otherImages.length; i += batchSize) {
-                    const batch = otherImages.slice(i, i + batchSize);
-                    const batchPromises = batch.map(async (imagePath) => {
-                        try {
-                            const img = await loadImage(imagePath);
-                            const features = await extractFeatures(img);
-                            const similarity = cosineSimilarity(selectedFeatures, features);
-                            
-                            return {
-                                path: imagePath,
-                                score: similarity
-                            };
-                        } catch (error) {
-                            console.error(`Error processing ${imagePath}:`, error);
-                            return {
-                                path: imagePath,
-                                score: 0
-                            };
-                        }
-                    });
-                    
-                    const batchResults = await Promise.all(batchPromises);
-                    results.push(...batchResults);
-                    
-                    // Update progress
-                    showStatus(`Processing images... ${Math.min(i + batchSize, otherImages.length)}/${otherImages.length}`, 'info');
-                }
+                // Process all images at once for maximum speed
+                const processingPromises = otherImages.map(async (imagePath) => {
+                    try {
+                        const img = await loadImage(imagePath);
+                        const features = await extractFeatures(img);
+                        const similarity = cosineSimilarity(selectedFeatures, features);
+                        
+                        return {
+                            path: imagePath,
+                            score: similarity
+                        };
+                    } catch (error) {
+                        console.error(`Error processing ${imagePath}:`, error);
+                        return {
+                            path: imagePath,
+                            score: 0
+                        };
+                    }
+                });
+                
+                // Wait for all processing to complete
+                const allResults = await Promise.all(processingPromises);
+                results.push(...allResults);
                 
                 // Sort by similarity score
                 results.sort((a, b) => b.score - a.score);
@@ -569,8 +579,11 @@
                 const imageItem = document.createElement('div');
                 imageItem.className = 'image-item';
                 
+                // Show placeholder immediately
                 imageItem.innerHTML = `
-                    <img src="${result.path}" alt="Recommendation ${index + 1}" loading="lazy">
+                    <div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                        <span style="color: #666;">Loading...</span>
+                    </div>
                     <div class="similarity-score">${(result.score * 100).toFixed(1)}%</div>
                     <div class="image-info">
                         <strong>Recommendation ${index + 1}</strong>
@@ -580,6 +593,38 @@
                         <small>Similarity: ${(result.score * 100).toFixed(1)}%</small>
                     </div>
                 `;
+                
+                // Load image immediately for recommendations
+                const img = new Image();
+                img.onload = () => {
+                    imageItem.innerHTML = `
+                        <img src="${result.path}" alt="Recommendation ${index + 1}" loading="eager">
+                        <div class="similarity-score">${(result.score * 100).toFixed(1)}%</div>
+                        <div class="image-info">
+                            <strong>Recommendation ${index + 1}</strong>
+                            <br>
+                            <small>${result.path.split('/').pop()}</small>
+                            <br>
+                            <small>Similarity: ${(result.score * 100).toFixed(1)}%</small>
+                        </div>
+                    `;
+                };
+                img.onerror = () => {
+                    imageItem.innerHTML = `
+                        <div style="height: 200px; background: #f0f0f0; display: flex; align-items: center; justify-content: center;">
+                            <span style="color: #666;">Failed to load</span>
+                        </div>
+                        <div class="similarity-score">${(result.score * 100).toFixed(1)}%</div>
+                        <div class="image-info">
+                            <strong>Recommendation ${index + 1}</strong>
+                            <br>
+                            <small>${result.path.split('/').pop()}</small>
+                            <br>
+                            <small>Similarity: ${(result.score * 100).toFixed(1)}%</small>
+                        </div>
+                    `;
+                };
+                img.src = result.path;
                 
                 container.appendChild(imageItem);
             });
