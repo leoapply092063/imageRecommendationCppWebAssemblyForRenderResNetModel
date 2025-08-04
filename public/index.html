@@ -105,16 +105,7 @@
         
         
         
-        .similarity-score {
-            background: #667eea;
-            color: white;
-            padding: 5px 10px;
-            border-radius: 15px;
-            font-size: 12px;
-            position: absolute;
-            top: 10px;
-            right: 10px;
-        }
+
         
         .status {
             padding: 15px;
@@ -430,14 +421,6 @@
                 throw new Error('ResNet model not loaded. Cannot extract features.');
             }
             
-            // Use WebAssembly for image processing if available
-            if (window.ImageRecommendationWasm && window.ImageRecommendationWasm.processImage) {
-                const processed = window.ImageRecommendationWasm.processImage(imageData.data, 224, 224);
-                if (processed) {
-                    return processed;
-                }
-            }
-            
             // Use ResNet for feature extraction
             try {
                 console.log('Extracting features with ResNet...');
@@ -514,11 +497,11 @@
             return new ort.Tensor('float32', normalized, [1, 3, 224, 224]);
         }
 
-        // Calculate cosine similarity
+        // Calculate cosine similarity using WebAssembly
         function cosineSimilarity(v1, v2) {
-            // Use WebAssembly for similarity calculation if available
-            if (window.ImageRecommendationWasm && window.ImageRecommendationWasm.calculateSimilarity) {
-                return window.ImageRecommendationWasm.calculateSimilarity(v1, v2);
+            // Use WebAssembly for cosine similarity calculation
+            if (window.ImageRecommendationWasm && window.ImageRecommendationWasm.cosineSimilarity) {
+                return window.ImageRecommendationWasm.cosineSimilarity(v1, v2);
             }
             
             // Fallback to JavaScript calculation

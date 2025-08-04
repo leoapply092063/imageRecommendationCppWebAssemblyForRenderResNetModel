@@ -5,7 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "build": "emcc Image_Selector_by_CLick_with_merged_image_similarity.cpp -o public/app.js -s WASM=1 -s EXPORTED_FUNCTIONS='[\"_main\", \"_initProcessor\", \"_calculateSimilarity\", \"_processImage\", \"_getImageStats\"]' -s EXPORTED_RUNTIME_METHODS='[\"ccall\", \"cwrap\"]' -s ALLOW_MEMORY_GROWTH=1 -s USE_WEBGL2=1 -s FULL_ES3=1 -s BINDING=1",
+    "build": "emcc Image_Selector_by_CLick_with_merged_image_similarity.cpp -o public/app.js -s WASM=1 -s EXPORTED_FUNCTIONS='[\"_main\", \"_initProcessor\", \"_cosineSimilarity\"]' -s EXPORTED_RUNTIME_METHODS='[\"ccall\", \"cwrap\", \"malloc\", \"free\"]' -s ALLOW_MEMORY_GROWTH=1 -s USE_WEBGL2=1 -s FULL_ES3=1 -s BINDING=1",
     "dev": "nodemon server.js",
     "download-model": "node download-model.js"
   },
